@@ -78,7 +78,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # PASO DE SEGURIDAD: Inicializar Android si no existe
       - name: Initialize Android
         run: |
           if [ ! -d "src-tauri/gen/android" ]; then
@@ -86,16 +85,18 @@ jobs:
             npm run tauri android init
           fi
 
-      # 1. CONSTRUIR APK UNIVERSAL (Este es el cambio clave)
-      - name: Build Android APK
-        run: npm run tauri android build -- --apk
+      # --- CAMBIO CLAVE AQUÍ ---
+      # Añadimos "--debug" para que Android Studio lo firme con la clave de prueba
+      # y Android acepte instalarlo.
+      - name: Build Android APK (Debug)
+        run: npm run tauri android build -- --apk --debug
 
-      # 2. SUBIR APK UNIVERSAL
+      # Subir el APK Debug
       - name: Upload Android APK
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          # Busca el archivo universal específicamente
-          files: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+          # La ruta cambia: ahora buscamos en la carpeta /debug/ en vez de /release/
+          files: src-tauri/gen/android/app/build/outputs/apk/*/debug/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
