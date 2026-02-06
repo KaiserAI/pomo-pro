@@ -1,25 +1,20 @@
-name: Release App
-
-# Esto dice: "Actívate solo cuando suba una etiqueta que empiece por 'v' (ej: v1.0.0)"
+name: Release Multiplatform
 on:
   push:
     tags:
       - 'v*'
 
 jobs:
-  build-and-release:
+  # TRABAJO 1: ESCRITORIO (Windows, Mac, Linux)
+  release-desktop:
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
-        # AQUÍ ESTÁ LA MAGIA:
-        # ubuntu-22.04: Crea un .deb compatible con versiones viejas y nuevas.
-        # windows-latest: Crea el .exe nativo.
-        platform: [ubuntu-22.04, windows-latest]
+        platform: [ubuntu-22.04, windows-latest, macos-latest]
 
     runs-on: ${{ matrix.platform }}
-
     steps:
       - uses: actions/checkout@v4
 
@@ -31,8 +26,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
 
-      # Instalar dependencias necesarias SOLO si estamos en Linux
-      - name: install dependencies (ubuntu only)
+      - name: Install dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
@@ -41,14 +35,56 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
-      # Este paso compila, crea el instalador y lo sube a GitHub Releases
-      - name: Build the app and upload
+      - name: Build Desktop
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'PomoPro ${{ github.ref_name }}'
-          body: 'Nueva versión compilada automáticamente para Windows y Linux.'
+          body: 'Versión Multiplataforma (Win/Mac/Linux)'
           draft: false
           prerelease: false
+
+  # TRABAJO 2: ANDROID (Móvil)
+  release-android:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: release-desktop # Espera a que acabe el escritorio (opcional)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Android APK
+        run: npm run tauri android build -- --target aarch64-linux-android
+        # Esto genera un APK "unsigned" (de depuración) que se puede instalar si activas "Orígenes desconocidos"
+
+      # Subir el APK a la Release
+      - name: Upload Android APK
+        uses: softprops/action-gh-release@v1
+        with:
+          files: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

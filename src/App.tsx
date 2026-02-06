@@ -13,7 +13,7 @@ function App() {
         {/* Fondo decorativo sutil (opcional) */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900/50 to-slate-950 pointer-events-none" />
 
-        {/* El Reloj: Centrado absolutamente en este espacio */}
+        {/* El Reloj: Centrado en este espacio */}
         <div className="w-full max-w-5xl px-4 z-0">
            <Timer />
         </div>
