@@ -3,9 +3,10 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
-  # TRABAJO 1: ESCRITORIO (Windows, Mac, Linux)
+  # --- TRABAJO 1: ESCRITORIO (Windows, Mac, Linux) ---
   release-desktop:
     permissions:
       contents: write
@@ -42,16 +43,17 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'PomoPro ${{ github.ref_name }}'
-          body: 'Versión Multiplataforma (Win/Mac/Linux)'
-          draft: false
+          # CORRECCIÓN: Nombres de parámetros actualizados
+          releaseBody: 'Versión Multiplataforma (Win/Mac/Linux)'
+          releaseDraft: false
           prerelease: false
 
-  # TRABAJO 2: ANDROID (Móvil)
+  # --- TRABAJO 2: ANDROID (Móvil) ---
   release-android:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    needs: release-desktop # Espera a que acabe el escritorio (opcional)
+    needs: release-desktop
     steps:
       - uses: actions/checkout@v4
 
@@ -77,14 +79,16 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      # CORRECCIÓN: Usamos el target corto 'aarch64' en lugar del largo
       - name: Build Android APK
-        run: npm run tauri android build -- --target aarch64-linux-android
-        # Esto genera un APK "unsigned" (de depuración) que se puede instalar si activas "Orígenes desconocidos"
+        run: npm run tauri android build -- --target aarch64
 
-      # Subir el APK a la Release
+      # Subir el APK generado a la Release
+      # Nota: Al especificar target aarch64, la ruta del output puede variar ligeramente.
+      # Usamos un comodín (*) para encontrar el APK sea cual sea el nombre exacto.
       - name: Upload Android APK
         uses: softprops/action-gh-release@v1
         with:
-          files: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+          files: src-tauri/gen/android/app/build/outputs/apk/*/release/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
