@@ -86,13 +86,16 @@ jobs:
             npm run tauri android init
           fi
 
-      # Construir usando el target corto correcto
+      # 1. CONSTRUIR APK UNIVERSAL (Este es el cambio clave)
       - name: Build Android APK
-        run: npm run tauri android build -- --target aarch64
+        run: npm run tauri android build -- --apk
 
+      # 2. SUBIR APK UNIVERSAL
       - name: Upload Android APK
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: src-tauri/gen/android/app/build/outputs/apk/*/release/*.apk
+          # Busca el archivo universal específicamente
+          files: src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
